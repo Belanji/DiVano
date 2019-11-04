@@ -154,10 +154,10 @@ void parse_input_file(struct lc_cell  * lc,
 
 
 	}
-      else if ( strcasecmp(parser,"sigma0") == 0 )
+      else if ( strcasecmp(parser,"beta") == 0 )
 	{
 
-	  error_handler=scanf("%lf",&(lc->sigma0[0]));
+	  error_handler=scanf("%lf",&(lc->beta[0]));
 
 	  
 	  if (error_handler <= 0 )
@@ -169,7 +169,7 @@ void parse_input_file(struct lc_cell  * lc,
 	    };
 
 
-          error_handler=scanf("%lf",&(lc->sigma0[1]));
+          error_handler=scanf("%lf",&(lc->beta[1]));
 
 	  
 	  if (error_handler <= 0 )

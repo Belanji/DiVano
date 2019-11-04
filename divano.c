@@ -66,8 +66,8 @@ int main (int argc, char * argv[]) {
   parse_input_file(  & lc_environment,  & tf, & timeprint , & dt );
 
   //Calculate auxiliaries variables:
-  lc_environment.beta[0]=lc_environment.rho0*lz/lc_environment.sigma0[0];
-  lc_environment.beta[1]=lc_environment.rho0*lz/lc_environment.sigma0[1];
+  lc_environment.sigma0[0]=lc_environment.rho0*lz/lc_environment.beta[0];
+  lc_environment.sigma0[1]=lc_environment.rho0*lz/lc_environment.beta[1];
   nz=lc_environment.nz;
   dz=lz/(nz-1);
   lc_environment.dz=dz;
