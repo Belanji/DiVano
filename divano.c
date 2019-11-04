@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <complex.h>
-#include "divas.h"
+#include "divano.h"
 #include "parser.h"
 
 const static double pi=3.141592653589793;
@@ -19,7 +19,7 @@ int main (int argc, char * argv[]) {
   struct lc_cell lc_environment;
   double  tf=50.0;
   double time, dz,  dt=1e-3;
-  double timeprint=0.2;
+  double timeprint =0.2;
   FILE * time_file, * snapshot_file;
   const char * initial_conditions="standard";
   const char * time_file_name="sigma_time.dat";
@@ -28,6 +28,9 @@ int main (int argc, char * argv[]) {
   int nz;
   int  snapshot_number=0;
   double total_particles;
+
+
+  printf("Welcome to Divano V1.0\n\n");
   
   //Standard values:
   strcpy(lc_environment.initial_conditions,initial_conditions);
@@ -37,16 +40,19 @@ int main (int argc, char * argv[]) {
   lc_environment.k=1.0;
   lc_environment.alpha=1.0;
 
-  lc_environment.tau=1.0;
+  lc_environment.tau_d=1.0;
 
   lc_environment.tau_k[0]=1.0;
   lc_environment.tau_k[1]=1.0;
 
-  lc_environment.tau_d[0]=1.0;
-  lc_environment.tau_d[1]=1.0;
+  lc_environment.tau[0]=1.0;
+  lc_environment.tau[1]=1.0;
 
-  lc_environment.sigma0[0]=0;
-  lc_environment.sigma0[1]=0;
+  lc_environment.sigma0[0]=1;
+  lc_environment.sigma0[1]=1;
+
+  lc_environment.sigma_i[0]=0;
+  lc_environment.sigma_i[1]=0;
 
   
   lc_environment.ti=0.;
@@ -58,13 +64,20 @@ int main (int argc, char * argv[]) {
   
   //Read the parameter values form the input file:
   parse_input_file(  & lc_environment,  & tf, & timeprint , & dt );
-  print_log_file( lc_environment, tf, dt, "log.file");
 
-
+  //Calculate auxiliaries variables:
+  lc_environment.beta[0]=lc_environment.rho0*lz/lc_environment.sigma0[0];
+  lc_environment.beta[1]=lc_environment.rho0*lz/lc_environment.sigma0[1];
   nz=lc_environment.nz;
   dz=lz/(nz-1);
   lc_environment.dz=dz;
   time=lc_environment.ti;
+
+
+
+  print_log_file( lc_environment, tf, dt, "log.file");
+
+
   
   //Starting the PDE solver:
   gsl_odeiv2_system sys = {RhsFunction, jacobian, nz+2, &lc_environment};
@@ -83,14 +96,14 @@ int main (int argc, char * argv[]) {
     {
 
 
-      rho[0]=lc_environment.sigma0[0];
+      rho[0]=lc_environment.sigma_i[0];
       for (int ii=1; ii<nz+1;ii++)
 	{
 
 	  rho[ii]=lc_environment.rho0;
 	  
 	}
-      rho[nz+1]=lc_environment.sigma0[1];
+      rho[nz+1]=lc_environment.sigma_i[1];
     }
 
   else 
@@ -153,27 +166,32 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   double dz = lz/(nz-1);
   double k=pi*mu.k;
   double alpha=mu.alpha;
-  const double tau=mu.tau;
-  double tau_d[2], tau_k[2];
+  const double tau_d=mu.tau_d;
+  double tau[2], tau_k[2];
   double drho, d2rho, dsigma;
   double GhostRho;
   double z_position;
+  double beta[2];
   
-  tau_d[0]=mu.tau_d[0];
-  tau_d[1]=mu.tau_d[1];
+  tau[0]=mu.tau[0];
+  tau[1]=mu.tau[1];
   
   
   tau_k[0]=mu.tau_k[0];
   tau_k[1]=mu.tau_k[1];
   
 
+  beta[0]=mu.beta[0];
+  beta[1]=mu.beta[1];
+
+
   /*bottom boundary equations */
 
   z_position=-lz/2;
-  dsigma=0.25*tau_d[0]*(rho[1]/tau_k[0]-rho[0]/tau);
+  dsigma=0.25*tau_d*(rho[1]*(1.0-rho[0])/tau_k[0]-rho[0]/tau[0]);
   
   //Extrapolate ghost point:
-  GhostRho=rho[2]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
+  GhostRho=rho[2]-4*dz*dsigma/(beta[0]*(1.0+alpha*cos(k*z_position)));
   
 
   drho=(rho[2]-GhostRho)/(2*dz);
@@ -201,8 +219,8 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   /* Top boundary equations*/
 
   z_position=lz/2;
-  dsigma=0.25*tau_d[1]*(rho[nz]/tau_k[1]-rho[nz+1]/tau);
-  GhostRho=rho[nz-1]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
+  dsigma=0.25*tau_d*(rho[nz]*(1.-rho[nz+1])/tau_k[1]-rho[nz+1]/tau[1]);
+  GhostRho=rho[nz-1]-4*dz*dsigma/(beta[1]*(1.0+alpha*cos(k*z_position)));
     
   
   drho=(GhostRho-rho[nz-1])/(2*dz);
@@ -310,20 +328,22 @@ void print_log_file(const struct lc_cell lc,
   printf("\n\nParameters values used:\n\n");
 
   printf( "Number of Layers(Nz):       %d  \n", lc.nz);
-  printf( " k(in Pi units):  %lf \n",lc.k);
-  printf( " alpha:  %lf \n",lc.alpha);
-  printf( "tau:  %e  \n",lc.tau);
+  printf( "k(in Pi units):  %g \n",lc.k);
+  printf( "alpha:  %g \n",lc.alpha);
+  printf( "tau_d:  %g  \n",lc.tau_d );
+  printf( "beta:      %g   %g \n",lc.beta[0],lc.beta[1]);
+  printf( "sigma0  :  %g   %g \n\n",lc.sigma0[0],lc.sigma0[1]);
 
   
   printf("\nBoundary conditions:\n\n");
   
-  printf(  "tau_d:  %e  \n",lc.tau_d[0] );
-  printf(  "tau_k:  %e  \n",lc.tau_k[0] );
 
-
+  printf(  "tau_k:  %g   %g  \n",lc.tau_k[0],lc.tau_k[1] );
+  printf(  "tau  :  %g   %g \n",lc.tau[0],lc.tau[1]);
+  printf(  "sigma_i  :  %g   %g \n\n",lc.sigma_i[0],lc.sigma_i[1]);
 
   printf("\nTime parameters:\n\n");
-  printf( "maximum timestep (dt):      %e \n",dt);
+  printf( "maximum timestep (dt):      %g \n",dt);
   printf( "Simulation time:            %lf  \n\n",tf);
     
 };
@@ -350,7 +370,7 @@ void print_sigma_time(const struct lc_cell lc,
 
   second_moment=average_rho_z_2-(2-average_rho)*average_rho_z_1*average_rho_z_1;
   
-  fprintf(time_file,"%e  %e  %e  %e  %e\n",time, rho[0],rho[nz+1],second_moment, total_particles);
+  fprintf(time_file,"%g  %g  %g  %g  %g\n",time, rho[0],rho[nz+1],second_moment, total_particles);
   fflush(time_file);
 
 }
@@ -360,11 +380,12 @@ double calculate_total_particle_quantity ( const double rho[],
 {
   struct lc_cell mu = *(struct lc_cell *)params;
   const int nz=mu.nz;
+  const double *beta=mu.beta;
   const double dz = lz/(nz-1);
   double total_particle_quantity;
 
 
-  total_particle_quantity=rho[0]+rho[nz+1];
+  total_particle_quantity=2*rho[0]/beta[0]+2*rho[nz+1]/beta[1];
 
   total_particle_quantity+=rho[1]*dz/2.;
   for(int ii=2; ii<nz;ii++)
