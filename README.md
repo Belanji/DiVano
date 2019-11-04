@@ -1,2 +1,2 @@
-# DiVano
-Diffusion with variation in space and Langmiur boundaries
+# DiVaS
+Diffusion with Variation in Space
