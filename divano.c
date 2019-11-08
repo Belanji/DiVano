@@ -216,12 +216,12 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   
   
   //Extrapolate ghost point:
-  GhostRho=rho[3]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
+  GhostRho=rho[3]-4*dz*dsigma/(beta[0]*(1.0+alpha*cos(k*z_position)));  
   
 
   drho=(rho[3]-GhostRho)/(2*dz);
   d2rho=(rho[3]+GhostRho-2.0*rho[2])/(dz*dz);
-//
+
   drho_dt=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
 
   
@@ -254,7 +254,9 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
 
   z_position=lz/2;
   dsigma=rho[nz+2];
-  GhostRho=rho[nz]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
+
+  GhostRho=rho[nz]-4*dz*dsigma/(beta[1]*(1.0+alpha*cos(k*z_position)));
+
     
   
   drho=(GhostRho-rho[nz])/(2*dz);
