@@ -30,7 +30,7 @@ int main (int argc, char * argv[]) {
   double total_particles;
 
 
-  printf("Welcome to Divano V1.0\n\n");
+  printf("Welcome to Divano-K V0.0\n\n");
   
   //Standard values:
   strcpy(lc_environment.initial_conditions,initial_conditions);
@@ -45,11 +45,11 @@ int main (int argc, char * argv[]) {
   lc_environment.tau_k[0]=1.0;
   lc_environment.tau_k[1]=1.0;
 
+  lc_environment.tau_a[0]=1.0;
+  lc_environment.tau_a[1]=1.0;
+
   lc_environment.tau[0]=1.0;
   lc_environment.tau[1]=1.0;
-
-  lc_environment.sigma0[0]=1;
-  lc_environment.sigma0[1]=1;
 
   lc_environment.sigma_i[0]=0;
   lc_environment.sigma_i[1]=0;
@@ -80,7 +80,7 @@ int main (int argc, char * argv[]) {
 
   
   //Starting the PDE solver:
-  gsl_odeiv2_system sys = {RhsFunction, jacobian, nz+2, &lc_environment};
+  gsl_odeiv2_system sys = {RhsFunction, jacobian, nz+4, &lc_environment};
 
 
   //Choose the integrator:
@@ -89,7 +89,7 @@ int main (int argc, char * argv[]) {
 
 
   //gsl_odeiv2_driver_set_hmax (pde_driver , dt );  
-  rho= (double *) malloc( (nz+2)*sizeof(double) );
+  rho= (double *) malloc( (nz+4)*sizeof(double) );
 
 
   if ( strcmp(lc_environment.initial_conditions,"standard") == 0 )
@@ -97,15 +97,32 @@ int main (int argc, char * argv[]) {
 
 
       rho[0]=lc_environment.sigma_i[0];
-      for (int ii=1; ii<nz+1;ii++)
+      rho[1]=0;
+            
+      for (int ii=2; ii<nz+2;ii++)
 	{
 
 	  rho[ii]=lc_environment.rho0;
 	  
 	}
-      rho[nz+1]=lc_environment.sigma_i[1];
+      rho[nz+2]=0;
+      rho[nz+3]=lc_environment.sigma_i[1];;
     }
+    else if (    strcasecmp(lc_environment.initial_conditions,"delta") == 0)
+    {
 
+
+      rho[0]=lc_environment.sigma_i[0];
+      rho[1]=0;
+            
+      for (int ii=2; ii<nz+2;ii++) rho[ii]=0;
+
+      rho[nz/2 +2]=2*lc_environment.rho0/dz;
+	
+	  	  	
+      rho[nz+2]=0;
+      rho[nz+3]=lc_environment.sigma_i[1];
+    }
   else 
     {
 
@@ -168,7 +185,8 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   double alpha=mu.alpha;
   const double tau_d=mu.tau_d;
   double tau[2], tau_k[2];
-  double drho, d2rho, dsigma;
+  double *tau_a=mu.tau_a;
+  double drho, d2rho, dsigma, sigma, drho_dt;
   double GhostRho;
   double z_position;
   double beta[2];
@@ -184,29 +202,45 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   beta[0]=mu.beta[0];
   beta[1]=mu.beta[1];
 
+  double tau_bn=0.25*tau_d/tau_k[0];
+  double tau_tn=0.25*tau_d/tau_k[1];
+  
+  
 
   /*bottom boundary equations */
 
   z_position=-lz/2;
-  dsigma=0.25*tau_d*(rho[1]*(1.0-rho[0])/tau_k[0]-rho[0]/tau[0]);
+
+  sigma=rho[0];
+  dsigma=rho[1];
+  
   
   //Extrapolate ghost point:
-  GhostRho=rho[2]-4*dz*dsigma/(beta[0]*(1.0+alpha*cos(k*z_position)));
+  GhostRho=rho[3]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
   
 
-  drho=(rho[2]-GhostRho)/(2*dz);
-  d2rho=(rho[2]+GhostRho-2.0*rho[1])/(dz*dz);
-//  
-  Rhs[0]=dsigma;
-  Rhs[1]=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
+  drho=(rho[3]-GhostRho)/(2*dz);
+  d2rho=(rho[3]+GhostRho-2.0*rho[2])/(dz*dz);
+//
+  drho_dt=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
 
+  
+  Rhs[0]=dsigma;
+  Rhs[1]=-rho[2]*tau_bn*(dsigma-0.25*tau_d/tau_a[0])
+    +tau_bn*drho_dt*(1.-sigma)
+    -tau_bn*tau_d*dsigma/tau_a[0]
+    -tau_d*tau_d*sigma/(16.0*tau[0]*tau_a[0]);
+    
+
+
+  Rhs[2]=drho_dt;
 
   /*Bulk equations */
   
-  for(int ii=2; ii<nz+1; ii++)
+  for(int ii=3; ii<nz+1; ii++)
     {
 
-      z_position=-lz/2.+dz*(ii-1);
+      z_position=-lz/2.+dz*(ii-2);
       d2rho=(rho[ii+1]+rho[ii-1]-2.0*rho[ii])/(dz*dz);
       drho=(rho[ii+1]-rho[ii-1])/(2*dz);
 
@@ -219,16 +253,26 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   /* Top boundary equations*/
 
   z_position=lz/2;
-  dsigma=0.25*tau_d*(rho[nz]*(1.-rho[nz+1])/tau_k[1]-rho[nz+1]/tau[1]);
-  GhostRho=rho[nz-1]-4*dz*dsigma/(beta[1]*(1.0+alpha*cos(k*z_position)));
+  dsigma=rho[nz+2];
+  GhostRho=rho[nz]-2*dz*dsigma/(1.0+alpha*cos(k*z_position));
     
   
-  drho=(GhostRho-rho[nz-1])/(2*dz);
-  d2rho=(GhostRho+rho[nz-1]-2.0*rho[nz])/(dz*dz);
-  
-  Rhs[nz]=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
-  Rhs[nz+1]=dsigma;
+  drho=(GhostRho-rho[nz])/(2*dz);
+  d2rho=(GhostRho+rho[nz]-2.0*rho[nz+1])/(dz*dz);
 
+  drho_dt=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
+  
+  Rhs[nz+1]=drho_dt;
+
+  Rhs[nz+2]=-rho[nz+1]*tau_tn*(dsigma-0.25*tau_d/tau_a[1])
+    +tau_tn*drho_dt*(1.-sigma)
+    -tau_tn*tau_d*dsigma/tau_a[1]
+    -tau_d*tau_d*sigma/(16.*tau[1]*tau_a[1]);
+  
+  Rhs[nz+3]=dsigma;
+
+
+  
   return GSL_SUCCESS;
       
     };
@@ -305,10 +349,10 @@ int print_snapshot_to_file(const double * rho,
   fprintf(snapshot_file,"#z  rho(z)\n");
 
   
-  for(int ii=1; ii<nz+1;ii++)
+  for(int ii=2; ii<nz+2;ii++)
     {
 	  
-      fprintf(snapshot_file,"%e  %e\n",(ii-1)*dz-lz/2,rho[ii]);
+      fprintf(snapshot_file,"%e  %e\n",(ii-2)*dz-lz/2,rho[ii]);
       
 
     };
@@ -370,7 +414,7 @@ void print_sigma_time(const struct lc_cell lc,
 
   second_moment=average_rho_z_2-(2-average_rho)*average_rho_z_1*average_rho_z_1;
   
-  fprintf(time_file,"%g  %g  %g  %g  %g\n",time, rho[0],rho[nz+1],second_moment, total_particles);
+  fprintf(time_file,"%g  %g  %g  %g  %g\n",time, rho[0],rho[nz+3],second_moment, total_particles);
   fflush(time_file);
 
 }
@@ -380,21 +424,20 @@ double calculate_total_particle_quantity ( const double rho[],
 {
   struct lc_cell mu = *(struct lc_cell *)params;
   const int nz=mu.nz;
-  const double *beta=mu.beta;
   const double dz = lz/(nz-1);
   double total_particle_quantity;
 
 
-  total_particle_quantity=2*rho[0]/beta[0]+2*rho[nz+1]/beta[1];
+  total_particle_quantity=rho[0]+rho[nz+3];
 
-  total_particle_quantity+=rho[1]*dz/2.;
-  for(int ii=2; ii<nz;ii++)
+  total_particle_quantity+=rho[2]*dz/2.;
+  for(int ii=3; ii<nz+1;ii++)
     {
 
       total_particle_quantity+=dz*rho[ii];
 
     }
-  total_particle_quantity+=rho[nz]*dz/2.;
+  total_particle_quantity+=rho[nz+1]*dz/2.;
   
   return total_particle_quantity;
 }
@@ -405,19 +448,19 @@ double calculate_average_rho ( const double rho[],
                                const void  * params)
 {
 
-    struct lc_cell mu = *(struct lc_cell *)params;
+  struct lc_cell mu = *(struct lc_cell *)params;
   const int nz=mu.nz;
   const double dz = lz/(nz-1);
   double average_rho;
 
-  average_rho=rho[1]*dz/2.;
-  for(int ii=2; ii<nz;ii++)
+  average_rho=rho[2]*dz/2.;
+  for(int ii=3; ii<nz+1;ii++)
     {
 
       average_rho+=dz*rho[ii];
 
     }
-  average_rho+=rho[nz]*dz/2.;
+  average_rho+=rho[nz+1]*dz/2.;
   
   return average_rho;
 }
@@ -433,16 +476,16 @@ double calculate_average_rho_z_1 ( const double rho[],
   double average_rho_z_1;
   double z_position=-lz/2.;  
     
-  average_rho_z_1=z_position*rho[1]*dz/2.;
-  for(int ii=2; ii<nz;ii++)
+  average_rho_z_1=z_position*rho[2]*dz/2.;
+  for(int ii=3; ii<nz+1;ii++)
     {
-      z_position=-lz/2.+dz*(ii-1);  
+      z_position=-lz/2.+dz*(ii-2);  
       average_rho_z_1+=dz*rho[ii]*z_position;
 
     }
 
   z_position=lz/2.;
-  average_rho_z_1+=z_position*rho[nz]*dz/2.;
+  average_rho_z_1+=z_position*rho[nz+1]*dz/2.;
 
   return average_rho_z_1;
 }
@@ -457,17 +500,17 @@ double calculate_average_rho_z_2 ( const double rho[],
   double average_rho_z_2;
   double z_position=-lz/2.;  
     
-  average_rho_z_2=z_position*z_position*rho[1]*dz/2.;
-  for(int ii=2; ii<nz;ii++)
+  average_rho_z_2=z_position*z_position*rho[2]*dz/2.;
+  for(int ii=3; ii<nz+1;ii++)
     {
-      z_position=-lz/2.+dz*(ii-1);  
+      z_position=-lz/2.+dz*(ii-2);  
       average_rho_z_2 += dz*rho[ii]*z_position*z_position;
 
     }
 
   z_position=lz/2.;
-  average_rho_z_2+=z_position*z_position*rho[nz]*dz/2.;
+  average_rho_z_2+=z_position*z_position*rho[nz+1]*dz/2.;
 
-  return average_rho_z_2
-    ;
+  return average_rho_z_2;
+    
 }

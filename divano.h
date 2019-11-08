@@ -7,7 +7,7 @@ struct lc_cell
 {
 
   double k, alpha, tau_d;
-  double tau_k[2], tau[2], beta[2];
+  double tau_k[2], tau[2], tau_a[2], beta[2];
   double ti, tf, dt;
   double rho0;
   double sigma0[2],sigma_i[2];;
