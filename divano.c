@@ -202,10 +202,12 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   beta[0]=mu.beta[0];
   beta[1]=mu.beta[1];
 
-  double tau_bn=0.25*tau_d/tau_k[0];
-  double tau_tn=0.25*tau_d/tau_k[1];
+  double tau_bk=0.25*tau_d/tau_k[0];
+  double tau_tk=0.25*tau_d/tau_k[1];
   
-  
+  double tau_ba=0.25*tau_d/tau_a[0];
+  double tau_ta=0.25*tau_d/tau_a[1];
+
 
   /*bottom boundary equations */
 
@@ -226,12 +228,10 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
 
   
   Rhs[0]=dsigma;
-  Rhs[1]=-rho[2]*tau_bn*(dsigma-0.25*tau_d/tau_a[0])
-    +tau_bn*drho_dt*(1.-sigma)
-    -tau_bn*tau_d*dsigma/tau_a[0]
-    -tau_d*tau_d*sigma/(16.0*tau[0]*tau_a[0]);
-    
-
+  Rhs[1]=(1.-sigma)*(tau_bk*drho_dt+rho[2]*tau_bk*tau_ba)
+    -tau_bk*rho[2]*dsigma
+    -tau_ba*dsigma
+    -tau_d*tau_d*sigma/(16.*tau_a[0]*tau[0]);
 
   Rhs[2]=drho_dt;
 
@@ -265,12 +265,11 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   drho_dt=(1.0+alpha*cos(k*z_position))*d2rho-alpha*k*sin(k*z_position)*drho;
   
   Rhs[nz+1]=drho_dt;
+  Rhs[nz+2]=(1.-sigma)*(tau_tk*drho_dt+rho[nz+1]*tau_tk*tau_ta)
+    -tau_tk*rho[nz+1]*dsigma
+    -tau_ta*dsigma
+    -tau_d*tau_d*sigma/(16.*tau_a[0]*tau[1]);
 
-  Rhs[nz+2]=-rho[nz+1]*tau_tn*(dsigma-0.25*tau_d/tau_a[1])
-    +tau_tn*drho_dt*(1.-sigma)
-    -tau_tn*tau_d*dsigma/tau_a[1]
-    -tau_d*tau_d*sigma/(16.*tau[1]*tau_a[1]);
-  
   Rhs[nz+3]=dsigma;
 
 
