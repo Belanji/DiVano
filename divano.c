@@ -385,6 +385,7 @@ void print_log_file(const struct lc_cell lc,
 
   printf(  "tau_k:  %g   %g  \n",lc.tau_k[0],lc.tau_k[1] );
   printf(  "tau  :  %g   %g \n",lc.tau[0],lc.tau[1]);
+  printf(  "tau_a : %g   %g \n",lc.tau_a[0], lc.tau_a[1]);
   printf(  "sigma_i  :  %g   %g \n\n",lc.sigma_i[0],lc.sigma_i[1]);
 
   printf("\nTime parameters:\n\n");

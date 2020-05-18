@@ -4,7 +4,8 @@
 rm divano
 #icc  -xHost -fast -static -Bstatic  parser.c divano.c -lm -lgsl -lgslcblas -o divano
 
-icc  -O0 -g -static -Bstatic  parser.c divano.c -lm -lgsl -lgslcblas -o divano
+#icc  -O0 -g -static -Bstatic  parser.c divano.c -lm -lgsl -lgslcblas -o divano
 
+gcc parser.c divano.c -lm -lgsl -lgslcblas -o divano
 
 
