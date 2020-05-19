@@ -126,7 +126,7 @@ int main (int argc, char * argv[]) {
   else 
     {
 
-      printf("No initial condition named %s is defined.\nAborting the program.\n\n",lc_environment);
+      printf("No initial condition named %s is defined.\nAborting the program.\n\n",lc_environment.initial_conditions);
       exit(0);
   
     };
