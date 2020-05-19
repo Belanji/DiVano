@@ -19,6 +19,10 @@ timeprint   0.05
 dt          1e-4
 
 
+initial_conditions  delta
 #initial_conditions  read_from_file
+
+
+
 #ic_file             ic_file.dat
 #output_file         output_file.dat
