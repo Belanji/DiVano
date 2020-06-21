@@ -218,7 +218,7 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   
   
   //Extrapolate ghost point:
-  GhostRho=rho[3]-4*dz*dsigma/(beta[0]*(1.0+alpha*cos(k*z_position)));  
+  GhostRho=rho[3]-4*dz*dsigma/(beta[0]*(1.0+alpha*cos(k*z_position)));
   
 
   drho=(rho[3]-GhostRho)/(2*dz);
@@ -268,7 +268,7 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   Rhs[nz+2]=(1.-sigma)*(tau_tk*drho_dt+rho[nz+1]*tau_tk*tau_ta)
     -tau_tk*rho[nz+1]*dsigma
     -tau_ta*dsigma
-    -tau_d*tau_d*sigma/(16.*tau_a[0]*tau[1]);
+    -tau_d*tau_d*sigma/(16.*tau_a[1]*tau[1]);
 
   Rhs[nz+3]=dsigma;
 
@@ -430,7 +430,7 @@ double calculate_total_particle_quantity ( const double rho[],
   double total_particle_quantity;
 
 
-  total_particle_quantity=rho[0]+rho[nz+3];
+  total_particle_quantity=2*rho[0]/mu.beta[0]+2*rho[nz+3]/mu.beta[1];
 
   total_particle_quantity+=rho[2]*dz/2.;
   for(int ii=3; ii<nz+1;ii++)

@@ -1,20 +1,20 @@
 nz         500
 
-k         2.
-alpha     0.50
+k         0.0
+alpha     0.5
 tau_d     1
 
 
 
 
-tau     1  1  
-tau_k   1 1
-tau_a   0.1 0.5
-beta  2.0   2.0
+tau     0.1  0.1  
+tau_k   0.1 0.1
+tau_a   0.1 0.1
+beta    5.0   5.0
 
 
 ti          0.0
-tf          0.5
+tf          1.5
 timeprint   0.05
 dt          1e-4
 

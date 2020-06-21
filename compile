@@ -6,6 +6,6 @@ rm divano
 
 #icc  -O0 -g -static -Bstatic  parser.c divano.c -lm -lgsl -lgslcblas -o divano
 
-gcc parser.c divano.c -lm -lgsl -lgslcblas -o divano
+gcc -O3 parser.c divano.c -Bstatic -lm -lgsl -lgslcblas -o divano
 
 
