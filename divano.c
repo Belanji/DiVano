@@ -202,8 +202,8 @@ int RhsFunction (double t, const double rho[], double Rhs[], void * params)
   beta[0]=mu.beta[0];
   beta[1]=mu.beta[1];
 
-  double tau_bk=0.25*tau_d/tau_k[0];
-  double tau_tk=0.25*tau_d/tau_k[1];
+  double tau_bk=0.125*beta[0]*tau_d/tau_k[0];
+  double tau_tk=0.125*beta[1]*tau_d/tau_k[1];
   
   double tau_ba=0.25*tau_d/tau_a[0];
   double tau_ta=0.25*tau_d/tau_a[1];
